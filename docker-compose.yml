@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: echogpt-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: echogpt
+      POSTGRES_PASSWORD: echogpt_password
+      POSTGRES_DB: echogpt_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U echogpt -d echogpt_db']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # NestJS Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: echogpt-api
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgresql://echogpt:echogpt_password@postgres:5432/echogpt_db?schema=public
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+
+volumes:
+  postgres_data:
