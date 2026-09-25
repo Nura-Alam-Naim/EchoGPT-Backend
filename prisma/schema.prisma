@@ -1,0 +1,191 @@
+// EchoGPT Database Schema
+// Using Prisma ORM with PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ROLES ────────────────────────────────────────────
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique // ADMIN, USER
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  users       User[]
+
+  @@map("roles")
+}
+
+// ─── USERS ────────────────────────────────────────────
+model User {
+  id                     String             @id @default(uuid())
+  email                  String             @unique
+  passwordHash           String             @map("password_hash")
+  firstName              String?            @map("first_name")
+  lastName               String?            @map("last_name")
+  avatarUrl              String?            @map("avatar_url")
+  isEmailVerified        Boolean            @default(false) @map("is_email_verified")
+  emailVerificationToken String?            @map("email_verification_token")
+  roleId                 String             @map("role_id")
+  createdAt              DateTime           @default(now()) @map("created_at")
+  updatedAt              DateTime           @updatedAt @map("updated_at")
+
+  role          Role               @relation(fields: [roleId], references: [id])
+  sessions      Session[]
+  subscription  Subscription?
+  conversations ChatConversation[]
+  webSearches   WebSearch[]
+  apiUsageLogs  ApiUsageLog[]
+
+  @@map("users")
+}
+
+// ─── SESSIONS ─────────────────────────────────────────
+model Session {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  refreshTokenHash String   @map("refresh_token_hash")
+  ipAddress        String?  @map("ip_address")
+  userAgent        String?  @map("user_agent")
+  expiresAt        DateTime @map("expires_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ─── SUBSCRIPTIONS ────────────────────────────────────
+model Subscription {
+  id                 String             @id @default(uuid())
+  userId             String             @unique @map("user_id")
+  plan               SubscriptionPlan   @default(FREE)
+  status             SubscriptionStatus @default(ACTIVE)
+  maxRequestsPerDay  Int                @default(20) @map("max_requests_per_day")
+  usedRequestsToday  Int                @default(0) @map("used_requests_today")
+  currentPeriodStart DateTime           @default(now()) @map("current_period_start")
+  currentPeriodEnd   DateTime?          @map("current_period_end")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+enum SubscriptionPlan {
+  FREE
+  PREMIUM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+// ─── AI PROVIDERS ─────────────────────────────────────
+model AiProvider {
+  id              String         @id @default(uuid())
+  name            String         @unique
+  slug            String         @unique
+  type            ProviderType
+  apiKeyEncrypted String?        @map("api_key_encrypted")
+  defaultModel    String?        @map("default_model")
+  isEnabled       Boolean        @default(true) @map("is_enabled")
+  isDefault       Boolean        @default(false) @map("is_default")
+  config          Json?          @default("{}")
+  lastHealthCheck DateTime?      @map("last_health_check")
+  healthStatus    String?        @default("UNKNOWN") @map("health_status")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  chatMessages ChatMessage[]
+  webSearches  WebSearch[]
+
+  @@map("ai_providers")
+}
+
+enum ProviderType {
+  OPENAI
+  CLAUDE
+  GEMINI
+}
+
+// ─── CHAT CONVERSATIONS ──────────────────────────────
+model ChatConversation {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String   @default("New Conversation")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@map("chat_conversations")
+}
+
+// ─── CHAT MESSAGES ────────────────────────────────────
+model ChatMessage {
+  id             String      @id @default(uuid())
+  conversationId String      @map("conversation_id")
+  providerId     String?     @map("provider_id")
+  role           MessageRole
+  content        String
+  modelUsed      String?     @map("model_used")
+  tokensUsed     Int?        @map("tokens_used")
+  responseTimeMs Int?        @map("response_time_ms")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  provider     AiProvider?      @relation(fields: [providerId], references: [id], onDelete: SetNull)
+
+  @@map("chat_messages")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+// ─── WEB SEARCHES ─────────────────────────────────────
+model WebSearch {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  providerId     String?  @map("provider_id")
+  query          String
+  results        Json?    @default("[]")
+  isCached       Boolean  @default(false) @map("is_cached")
+  responseTimeMs Int?     @map("response_time_ms")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider AiProvider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+
+  @@map("web_searches")
+}
+
+// ─── API USAGE LOGS ───────────────────────────────────
+model ApiUsageLog {
+  id              String   @id @default(uuid())
+  userId          String?  @map("user_id")
+  endpoint        String
+  method          String
+  statusCode      Int      @map("status_code")
+  responseTimeMs  Int?     @map("response_time_ms")
+  ipAddress       String?  @map("ip_address")
+  requestBody     Json?    @map("request_body")
+  responseSummary Json?    @map("response_summary")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("api_usage_logs")
+}
