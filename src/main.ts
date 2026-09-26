@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -8,6 +8,7 @@ import { ApiLoggerInterceptor } from './common/interceptors/api-logger.intercept
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
 
   // Global prefix for all routes
   app.setGlobalPrefix('api');
@@ -86,7 +87,7 @@ Use the \`/api/auth/login\` endpoint to obtain tokens.`,
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`\n🚀 EchoGPT API is running on: http://localhost:${port}`);
-  console.log(`📚 Swagger docs available at: http://localhost:${port}/api/docs\n`);
+  logger.log(`EchoGPT API is running on: http://localhost:${port}`);
+  logger.log(`Swagger docs available at: http://localhost:${port}/api/docs`);
 }
 bootstrap();
