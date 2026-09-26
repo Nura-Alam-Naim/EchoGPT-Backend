@@ -10,7 +10,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── ROLES ────────────────────────────────────────────
 model Role {
   id          String   @id @default(uuid())
   name        String   @unique // ADMIN, USER
@@ -21,7 +20,6 @@ model Role {
   @@map("roles")
 }
 
-// ─── USERS ────────────────────────────────────────────
 model User {
   id                     String             @id @default(uuid())
   email                  String             @unique
@@ -45,7 +43,6 @@ model User {
   @@map("users")
 }
 
-// ─── SESSIONS ─────────────────────────────────────────
 model Session {
   id               String   @id @default(uuid())
   userId           String   @map("user_id")
@@ -60,7 +57,6 @@ model Session {
   @@map("sessions")
 }
 
-// ─── SUBSCRIPTIONS ────────────────────────────────────
 model Subscription {
   id                 String             @id @default(uuid())
   userId             String             @unique @map("user_id")
@@ -89,7 +85,6 @@ enum SubscriptionStatus {
   EXPIRED
 }
 
-// ─── AI PROVIDERS ─────────────────────────────────────
 model AiProvider {
   id              String         @id @default(uuid())
   name            String         @unique
@@ -117,7 +112,6 @@ enum ProviderType {
   GEMINI
 }
 
-// ─── CHAT CONVERSATIONS ──────────────────────────────
 model ChatConversation {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
@@ -131,7 +125,6 @@ model ChatConversation {
   @@map("chat_conversations")
 }
 
-// ─── CHAT MESSAGES ────────────────────────────────────
 model ChatMessage {
   id             String      @id @default(uuid())
   conversationId String      @map("conversation_id")
@@ -155,7 +148,6 @@ enum MessageRole {
   SYSTEM
 }
 
-// ─── WEB SEARCHES ─────────────────────────────────────
 model WebSearch {
   id             String   @id @default(uuid())
   userId         String   @map("user_id")
@@ -172,7 +164,6 @@ model WebSearch {
   @@map("web_searches")
 }
 
-// ─── API USAGE LOGS ───────────────────────────────────
 model ApiUsageLog {
   id              String   @id @default(uuid())
   userId          String?  @map("user_id")
