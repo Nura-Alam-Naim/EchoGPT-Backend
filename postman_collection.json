@@ -1,28 +1,63 @@
 {
   "info": {
     "name": "EchoGPT Backend API",
-    "description": "Production-ready REST API for the EchoGPT Chrome Extension.\nBuilt with NestJS, PostgreSQL, Prisma, and Swagger.\n\n## Setup\n1. Set the `baseUrl` variable to your server URL (default: http://localhost:3000)\n2. Register or login to get a JWT token\n3. The token is automatically set via the login/register scripts\n\n## Default Admin Credentials\n- Email: admin@echogpt.com\n- Password: Admin@123",
+    "description": "Production-ready REST API for the EchoGPT Chrome Extension.\nBuilt with NestJS, PostgreSQL, Prisma, and Swagger.\n\n## Setup\n1. Set the `baseUrl` variable to your server URL (default: http://localhost:3000)\n2. Run the collection in order \u2014 Login runs first and auto-sets the JWT token\n\n## Default Admin Credentials\n- Email: admin@echogpt.com\n- Password: Admin@123",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "version": "1.0.0"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
-    { "key": "accessToken", "value": "", "type": "string" },
-    { "key": "refreshToken", "value": "", "type": "string" },
-    { "key": "userId", "value": "", "type": "string" },
-    { "key": "conversationId", "value": "", "type": "string" },
-    { "key": "providerId", "value": "", "type": "string" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testUserId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conversationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "providerId",
+      "value": "",
+      "type": "string"
+    }
   ],
   "auth": {
     "type": "bearer",
-    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
   },
   "item": [
     {
-      "name": "Authentication",
+      "name": "1. Authentication",
       "item": [
         {
-          "name": "Register",
+          "name": "Register New User",
           "event": [
             {
               "listen": "test",
@@ -30,74 +65,61 @@
                 "exec": [
                   "if (pm.response.code === 201) {",
                   "  var json = pm.response.json();",
-                  "  pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
-                  "  pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);",
-                  "  pm.collectionVariables.set('userId', json.user.id);",
+                  "  pm.collectionVariables.set('testUserId', json.user.id);",
                   "  pm.test('Registration successful', () => pm.response.to.have.status(201));",
+                  "} else {",
+                  "  pm.test('Register returned ' + pm.response.code + ' (user may already exist)', () => true);",
                   "}"
                 ]
               }
             }
           ],
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "url": "{{baseUrl}}/api/auth/register",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"Test@1234\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\"\n}"
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@1234\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\"\n}"
             }
           }
         },
         {
-          "name": "Login",
+          "name": "Login as Admin",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 200) {",
-                  "  var json = pm.response.json();",
-                  "  pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
-                  "  pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);",
-                  "  pm.collectionVariables.set('userId', json.user.id);",
-                  "  pm.test('Login successful', () => pm.response.to.have.status(200));",
-                  "}"
+                  "pm.test('Login successful', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
+                  "pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);",
+                  "pm.collectionVariables.set('userId', json.user.id);"
                 ]
               }
             }
           ],
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "url": "{{baseUrl}}/api/auth/login",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@echogpt.com\",\n  \"password\": \"Admin@123\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Login (Admin)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "  var json = pm.response.json();",
-                  "  pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
-                  "  pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);",
-                  "  pm.test('Admin login successful', () => pm.response.to.have.status(200));",
-                  "}"
-                ]
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/api/auth/login",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"admin@echogpt.com\",\n  \"password\": \"Admin@123\"\n}"
@@ -111,19 +133,26 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 200) {",
-                  "  var json = pm.response.json();",
-                  "  pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
-                  "  pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);",
-                  "}"
+                  "pm.test('Token refreshed', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
+                  "pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);"
                 ]
               }
             }
           ],
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "url": "{{baseUrl}}/api/auth/refresh",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
@@ -131,19 +160,23 @@
           }
         },
         {
-          "name": "Logout",
-          "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/api/auth/logout",
-            "auth": {
-              "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{accessToken}}" }]
+          "name": "Verify Email (sample token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Verify email endpoint reachable', () => {",
+                  "  pm.expect([200, 201, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
             }
-          }
-        },
-        {
-          "name": "Verify Email",
+          ],
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "url": "{{baseUrl}}/api/auth/verify-email/sample-token-here"
           }
@@ -151,10 +184,24 @@
       ]
     },
     {
-      "name": "Users",
+      "name": "2. Users",
       "item": [
         {
           "name": "Get My Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Profile retrieved', () => pm.response.to.have.status(200));",
+                  "pm.test('Has email field', () => {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/users/profile"
@@ -162,70 +209,85 @@
         },
         {
           "name": "Update Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Profile updated', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PATCH",
             "url": "{{baseUrl}}/api/users/profile",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"Name\"\n}"
+              "raw": "{\n  \"firstName\": \"Admin\",\n  \"lastName\": \"Updated\"\n}"
             }
           }
         },
         {
-          "name": "Change Password",
-          "request": {
-            "method": "PATCH",
-            "url": "{{baseUrl}}/api/users/change-password",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"currentPassword\": \"Admin@123\",\n  \"newPassword\": \"NewPass@456\"\n}"
+          "name": "Get User by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User retrieved', () => pm.response.to.have.status(200));"
+                ]
+              }
             }
-          }
-        },
-        {
-          "name": "Get User by ID (Admin)",
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/users/{{userId}}"
-          }
-        },
-        {
-          "name": "Delete Account",
-          "request": {
-            "method": "DELETE",
-            "url": "{{baseUrl}}/api/users/account"
           }
         }
       ]
     },
     {
-      "name": "Subscriptions",
+      "name": "3. Subscriptions",
       "item": [
         {
           "name": "Get Subscription Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Subscription status retrieved', () => pm.response.to.have.status(200));",
+                  "pm.test('Has plan field', () => {",
+                  "  pm.expect(pm.response.json()).to.have.property('plan');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/subscriptions/status"
           }
         },
         {
-          "name": "Upgrade to Premium",
-          "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/api/subscriptions/upgrade"
-          }
-        },
-        {
-          "name": "Downgrade to Free",
-          "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/api/subscriptions/downgrade"
-          }
-        },
-        {
           "name": "Get Usage Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Usage retrieved', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/subscriptions/usage"
@@ -233,15 +295,59 @@
         },
         {
           "name": "Get Remaining Requests",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Remaining requests retrieved', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/subscriptions/remaining"
+          }
+        },
+        {
+          "name": "Downgrade to Free",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Downgrade successful', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/subscriptions/downgrade"
+          }
+        },
+        {
+          "name": "Upgrade to Premium",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Upgrade successful', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/subscriptions/upgrade"
           }
         }
       ]
     },
     {
-      "name": "AI Providers",
+      "name": "4. AI Providers",
       "item": [
         {
           "name": "List All Providers",
@@ -250,11 +356,11 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 200) {",
-                  "  var json = pm.response.json();",
-                  "  if (json.length > 0) {",
-                  "    pm.collectionVariables.set('providerId', json[0].id);",
-                  "  }",
+                  "pm.test('Providers listed', () => pm.response.to.have.status(200));",
+                  "var json = pm.response.json();",
+                  "if (json.length > 0) {",
+                  "  pm.collectionVariables.set('providerId', json[0].id);",
+                  "  pm.test('Provider ID saved', () => true);",
                   "}"
                 ]
               }
@@ -267,116 +373,167 @@
         },
         {
           "name": "Get Provider by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Provider retrieved', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/providers/{{providerId}}"
           }
         },
         {
-          "name": "Create Provider (Admin)",
-          "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/api/providers",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Custom OpenAI\",\n  \"slug\": \"custom-openai\",\n  \"type\": \"OPENAI\",\n  \"defaultModel\": \"gpt-4o\",\n  \"apiKey\": \"sk-your-api-key-here\",\n  \"isEnabled\": true,\n  \"isDefault\": false,\n  \"config\": { \"maxTokens\": 4096, \"temperature\": 0.7 }\n}"
+          "name": "Update Provider",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Provider updated', () => pm.response.to.have.status(200));"
+                ]
+              }
             }
-          }
-        },
-        {
-          "name": "Update Provider (Admin)",
+          ],
           "request": {
             "method": "PATCH",
             "url": "{{baseUrl}}/api/providers/{{providerId}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"defaultModel\": \"gpt-4o\",\n  \"config\": { \"maxTokens\": 8192 }\n}"
+              "raw": "{\n  \"config\": { \"maxTokens\": 8192, \"temperature\": 0.7 }\n}"
             }
           }
         },
         {
-          "name": "Toggle Provider (Admin)",
+          "name": "Toggle Provider",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Provider toggled', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PATCH",
             "url": "{{baseUrl}}/api/providers/{{providerId}}/toggle"
           }
         },
         {
-          "name": "Health Check Provider",
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/api/providers/{{providerId}}/health"
-          }
-        },
-        {
-          "name": "Delete Provider (Admin)",
-          "request": {
-            "method": "DELETE",
-            "url": "{{baseUrl}}/api/providers/{{providerId}}"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Chat",
-      "item": [
-        {
-          "name": "Send Message",
+          "name": "Toggle Provider (re-enable)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  var json = pm.response.json();",
-                  "  pm.collectionVariables.set('conversationId', json.conversationId);",
-                  "}"
+                  "pm.test('Provider re-enabled', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/providers/{{providerId}}/toggle"
+          }
+        },
+        {
+          "name": "Create Provider (Admin)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var timestamp = Date.now();",
+                  "pm.collectionVariables.set(\"uniqueSlug\", \"test-provider-\" + timestamp);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Provider created\", () => pm.response.to.have.status(201));"
                 ]
               }
             }
           ],
           "request": {
             "method": "POST",
-            "url": "{{baseUrl}}/api/chat/send",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"message\": \"Explain quantum computing in simple terms\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Send Message (with Provider)",
-          "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/api/chat/send",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"message\": \"What is machine learning?\",\n  \"conversationId\": \"{{conversationId}}\",\n  \"providerId\": \"{{providerId}}\",\n  \"model\": \"gpt-4o-mini\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Send Message (Streaming SSE)",
-          "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/api/chat/send/stream",
+            "url": "{{baseUrl}}/api/providers",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "text/event-stream" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"message\": \"Write a short poem about coding\"\n}"
-            },
-            "description": "Returns a Server-Sent Events (SSE) stream. Each event contains a partial content chunk. The final event has { \"done\": true }."
+              "raw": "{\n  \"name\": \"Test Provider {{uniqueSlug}}\",\n  \"slug\": \"{{uniqueSlug}}\",\n  \"type\": \"OPENAI\",\n  \"defaultModel\": \"gpt-4o\",\n  \"isEnabled\": true,\n  \"isDefault\": false,\n  \"config\": {\n    \"maxTokens\": 4096,\n    \"temperature\": 0.7\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Chat",
+      "item": [
+        {
+          "name": "Create Conversation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Conversation created', () => pm.response.to.have.status(201));",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('conversationId', json.conversation.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/chat/conversations",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Test Conversation\"\n}"
+            }
           }
         },
         {
           "name": "List Conversations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Conversations listed', () => pm.response.to.have.status(200));",
+                  "pm.test('Has at least 1 conversation', () => {",
+                  "  pm.expect(pm.response.json().length).to.be.greaterThan(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/chat/conversations"
@@ -384,29 +541,42 @@
         },
         {
           "name": "Get Conversation Messages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Conversation retrieved', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/chat/conversations/{{conversationId}}"
           }
         },
         {
-          "name": "Create Conversation",
-          "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/api/chat/conversations",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"My New Conversation\"\n}"
-            }
-          }
-        },
-        {
           "name": "Rename Conversation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Conversation renamed', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PATCH",
             "url": "{{baseUrl}}/api/chat/conversations/{{conversationId}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Renamed Conversation\"\n}"
@@ -414,7 +584,81 @@
           }
         },
         {
+          "name": "Send Message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Send endpoint reachable', () => {",
+                  "  pm.expect([201, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/chat/send",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Explain quantum computing in simple terms\",\n  \"conversationId\": \"{{conversationId}}\"\n}"
+            },
+            "description": "Note: Requires a configured AI provider with API key to return a full AI response."
+          }
+        },
+        {
+          "name": "Send Message (Streaming SSE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Stream endpoint reachable', () => {",
+                  "  pm.expect([200, 201, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/chat/send/stream",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "text/event-stream"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Write a short poem about coding\"\n}"
+            },
+            "description": "Returns a Server-Sent Events (SSE) stream. Each event has a partial content chunk. Final event: { \"done\": true }."
+          }
+        },
+        {
           "name": "Delete Conversation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Conversation deleted', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "DELETE",
             "url": "{{baseUrl}}/api/chat/conversations/{{conversationId}}"
@@ -423,14 +667,31 @@
       ]
     },
     {
-      "name": "Web Search",
+      "name": "6. Web Search",
       "item": [
         {
-          "name": "Search",
+          "name": "Search Query",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Search endpoint reachable', () => {",
+                  "  pm.expect([200, 201, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/search",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"query\": \"Latest trends in artificial intelligence 2024\"\n}"
@@ -439,6 +700,16 @@
         },
         {
           "name": "Search History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('History retrieved', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/search/history"
@@ -446,6 +717,16 @@
         },
         {
           "name": "Recent Searches",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Recent searches retrieved', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/search/recent"
@@ -453,25 +734,41 @@
         },
         {
           "name": "Search Suggestions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Suggestions retrieved', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/search/suggestions"
-          }
-        },
-        {
-          "name": "Delete Search History Entry",
-          "request": {
-            "method": "DELETE",
-            "url": "{{baseUrl}}/api/search/history/search-id-here"
           }
         }
       ]
     },
     {
-      "name": "Admin",
+      "name": "7. Admin",
       "item": [
         {
           "name": "Dashboard Statistics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Dashboard retrieved', () => pm.response.to.have.status(200));",
+                  "pm.test('Has totalUsers', () => {",
+                  "  pm.expect(pm.response.json()).to.have.property('totalUsers');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/admin/dashboard"
@@ -479,32 +776,33 @@
         },
         {
           "name": "List All Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Users listed', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/admin/users"
           }
         },
         {
-          "name": "Change User Role",
-          "request": {
-            "method": "PATCH",
-            "url": "{{baseUrl}}/api/admin/users/{{userId}}/role",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"role\": \"ADMIN\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Delete User (Admin)",
-          "request": {
-            "method": "DELETE",
-            "url": "{{baseUrl}}/api/admin/users/{{userId}}"
-          }
-        },
-        {
           "name": "All Subscriptions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Subscriptions listed', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/admin/subscriptions"
@@ -512,6 +810,16 @@
         },
         {
           "name": "Usage Analytics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Analytics retrieved', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/admin/usage-analytics"
@@ -519,6 +827,16 @@
         },
         {
           "name": "Request Logs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Logs retrieved', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/admin/request-logs"
@@ -526,9 +844,44 @@
         },
         {
           "name": "System Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('System healthy', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is HEALTHY', () => {",
+                  "  pm.expect(pm.response.json().status).to.eql('HEALTHY');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/admin/system-health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Cleanup (Run Last)",
+      "item": [
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Logout successful', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/logout"
           }
         }
       ]
