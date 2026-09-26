@@ -1,0 +1,537 @@
+{
+  "info": {
+    "name": "EchoGPT Backend API",
+    "description": "Production-ready REST API for the EchoGPT Chrome Extension.\nBuilt with NestJS, PostgreSQL, Prisma, and Swagger.\n\n## Setup\n1. Set the `baseUrl` variable to your server URL (default: http://localhost:3000)\n2. Register or login to get a JWT token\n3. The token is automatically set via the login/register scripts\n\n## Default Admin Credentials\n- Email: admin@echogpt.com\n- Password: Admin@123",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "conversationId", "value": "", "type": "string" },
+    { "key": "providerId", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  var json = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);",
+                  "  pm.collectionVariables.set('userId', json.user.id);",
+                  "  pm.test('Registration successful', () => pm.response.to.have.status(201));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"Test@1234\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var json = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);",
+                  "  pm.collectionVariables.set('userId', json.user.id);",
+                  "  pm.test('Login successful', () => pm.response.to.have.status(200));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@echogpt.com\",\n  \"password\": \"Admin@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var json = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);",
+                  "  pm.test('Admin login successful', () => pm.response.to.have.status(200));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@echogpt.com\",\n  \"password\": \"Admin@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var json = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/refresh",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/logout",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}" }]
+            }
+          }
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/verify-email/sample-token-here"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/users/profile"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/users/profile",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"Name\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/users/change-password",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Admin@123\",\n  \"newPassword\": \"NewPass@456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get User by ID (Admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/users/account"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subscriptions",
+      "item": [
+        {
+          "name": "Get Subscription Status",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/subscriptions/status"
+          }
+        },
+        {
+          "name": "Upgrade to Premium",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/subscriptions/upgrade"
+          }
+        },
+        {
+          "name": "Downgrade to Free",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/subscriptions/downgrade"
+          }
+        },
+        {
+          "name": "Get Usage Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/subscriptions/usage"
+          }
+        },
+        {
+          "name": "Get Remaining Requests",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/subscriptions/remaining"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Providers",
+      "item": [
+        {
+          "name": "List All Providers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var json = pm.response.json();",
+                  "  if (json.length > 0) {",
+                  "    pm.collectionVariables.set('providerId', json[0].id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/providers"
+          }
+        },
+        {
+          "name": "Get Provider by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/providers/{{providerId}}"
+          }
+        },
+        {
+          "name": "Create Provider (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/providers",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Custom OpenAI\",\n  \"slug\": \"custom-openai\",\n  \"type\": \"OPENAI\",\n  \"defaultModel\": \"gpt-4o\",\n  \"apiKey\": \"sk-your-api-key-here\",\n  \"isEnabled\": true,\n  \"isDefault\": false,\n  \"config\": { \"maxTokens\": 4096, \"temperature\": 0.7 }\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Provider (Admin)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/providers/{{providerId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"defaultModel\": \"gpt-4o\",\n  \"config\": { \"maxTokens\": 8192 }\n}"
+            }
+          }
+        },
+        {
+          "name": "Toggle Provider (Admin)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/providers/{{providerId}}/toggle"
+          }
+        },
+        {
+          "name": "Health Check Provider",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/providers/{{providerId}}/health"
+          }
+        },
+        {
+          "name": "Delete Provider (Admin)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/providers/{{providerId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "Send Message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  var json = pm.response.json();",
+                  "  pm.collectionVariables.set('conversationId', json.conversationId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/chat/send",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Explain quantum computing in simple terms\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Send Message (with Provider)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/chat/send",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"What is machine learning?\",\n  \"conversationId\": \"{{conversationId}}\",\n  \"providerId\": \"{{providerId}}\",\n  \"model\": \"gpt-4o-mini\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Send Message (Streaming SSE)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/chat/send/stream",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "text/event-stream" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Write a short poem about coding\"\n}"
+            },
+            "description": "Returns a Server-Sent Events (SSE) stream. Each event contains a partial content chunk. The final event has { \"done\": true }."
+          }
+        },
+        {
+          "name": "List Conversations",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/chat/conversations"
+          }
+        },
+        {
+          "name": "Get Conversation Messages",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/chat/conversations/{{conversationId}}"
+          }
+        },
+        {
+          "name": "Create Conversation",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/chat/conversations",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My New Conversation\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Rename Conversation",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/chat/conversations/{{conversationId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Renamed Conversation\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Conversation",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/chat/conversations/{{conversationId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Web Search",
+      "item": [
+        {
+          "name": "Search",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/search",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"Latest trends in artificial intelligence 2024\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Search History",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/search/history"
+          }
+        },
+        {
+          "name": "Recent Searches",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/search/recent"
+          }
+        },
+        {
+          "name": "Search Suggestions",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/search/suggestions"
+          }
+        },
+        {
+          "name": "Delete Search History Entry",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/search/history/search-id-here"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Dashboard Statistics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/dashboard"
+          }
+        },
+        {
+          "name": "List All Users",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/users"
+          }
+        },
+        {
+          "name": "Change User Role",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/admin/users/{{userId}}/role",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ADMIN\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete User (Admin)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/admin/users/{{userId}}"
+          }
+        },
+        {
+          "name": "All Subscriptions",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/subscriptions"
+          }
+        },
+        {
+          "name": "Usage Analytics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/usage-analytics"
+          }
+        },
+        {
+          "name": "Request Logs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/request-logs"
+          }
+        },
+        {
+          "name": "System Health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/system-health"
+          }
+        }
+      ]
+    }
+  ]
+}
