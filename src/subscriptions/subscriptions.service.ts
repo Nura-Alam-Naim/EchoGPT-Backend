@@ -10,7 +10,6 @@ import { PrismaService } from '../prisma/prisma.service';
 export class SubscriptionsService {
   private readonly logger = new Logger(SubscriptionsService.name);
 
-  // Plan limits configuration
   private readonly PLAN_LIMITS = {
     FREE: { maxRequestsPerDay: 20 },
     PREMIUM: { maxRequestsPerDay: 1000 },
@@ -18,13 +17,9 @@ export class SubscriptionsService {
 
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Get current subscription status
-   */
   async getStatus(userId: string) {
     const subscription = await this.findSubscription(userId);
 
-    // Reset daily usage if it's a new day
     await this.resetDailyUsageIfNeeded(subscription);
 
     return {
@@ -39,9 +34,6 @@ export class SubscriptionsService {
     };
   }
 
-  /**
-   * Upgrade to Premium plan
-   */
   async upgrade(userId: string) {
     const subscription = await this.findSubscription(userId);
 
@@ -73,9 +65,6 @@ export class SubscriptionsService {
     };
   }
 
-  /**
-   * Downgrade to Free plan
-   */
   async downgrade(userId: string) {
     const subscription = await this.findSubscription(userId);
 
@@ -105,9 +94,6 @@ export class SubscriptionsService {
     };
   }
 
-  /**
-   * Get usage stats
-   */
   async getUsage(userId: string) {
     const subscription = await this.findSubscription(userId);
     await this.resetDailyUsageIfNeeded(subscription);
@@ -123,9 +109,6 @@ export class SubscriptionsService {
     };
   }
 
-  /**
-   * Get remaining requests
-   */
   async getRemaining(userId: string) {
     const subscription = await this.findSubscription(userId);
     await this.resetDailyUsageIfNeeded(subscription);
@@ -139,9 +122,6 @@ export class SubscriptionsService {
     };
   }
 
-  /**
-   * Increment usage counter (called internally when user makes API requests)
-   */
   async incrementUsage(userId: string): Promise<boolean> {
     const subscription = await this.findSubscription(userId);
     await this.resetDailyUsageIfNeeded(subscription);
@@ -158,8 +138,6 @@ export class SubscriptionsService {
     return true;
   }
 
-  // ─── Private Helpers ───
-
   private async findSubscription(userId: string) {
     const subscription = await this.prisma.subscription.findUnique({
       where: { userId },
@@ -172,9 +150,6 @@ export class SubscriptionsService {
     return subscription;
   }
 
-  /**
-   * Reset daily usage counter if it's a new day
-   */
   private async resetDailyUsageIfNeeded(subscription: any) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);

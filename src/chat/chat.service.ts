@@ -20,11 +20,7 @@ export class ChatService {
     private subscriptionsService: SubscriptionsService,
   ) {}
 
-  /**
-   * Send a message and get an AI response
-   */
   async sendMessage(userId: string, dto: SendMessageDto) {
-    // Check usage limits
     const canProceed = await this.subscriptionsService.incrementUsage(userId);
     if (!canProceed) {
       throw new BadRequestException(
@@ -32,7 +28,6 @@ export class ChatService {
       );
     }
 
-    // Get or create conversation
     let conversationId = dto.conversationId;
     if (!conversationId) {
       const conversation = await this.prisma.chatConversation.create({
@@ -43,7 +38,6 @@ export class ChatService {
       });
       conversationId = conversation.id;
     } else {
-      // Verify conversation belongs to user
       const conversation = await this.prisma.chatConversation.findFirst({
         where: { id: conversationId, userId },
       });
@@ -52,7 +46,6 @@ export class ChatService {
       }
     }
 
-    // Save user message
     const userMessage = await this.prisma.chatMessage.create({
       data: {
         conversationId,
@@ -61,34 +54,29 @@ export class ChatService {
       },
     });
 
-    // Get conversation history for context
     const history = await this.prisma.chatMessage.findMany({
       where: { conversationId },
       orderBy: { createdAt: 'asc' },
       take: 20, // Last 20 messages for context
     });
 
-    // Format messages for the AI provider
     const messages = history.map((msg) => ({
       role: msg.role.toLowerCase(),
       content: msg.content,
     }));
 
-    // Get the AI provider
     const { provider, apiKey, implementation } =
       await this.aiProvidersService.getProviderForChat(dto.providerId);
 
     const model = dto.model || provider.defaultModel || 'gpt-4o-mini';
     const config = (provider.config as Record<string, any>) || {};
 
-    // Send to AI and measure response time
     const startTime = Date.now();
 
     try {
       const aiResult = await implementation.chat(apiKey, model, messages, config);
       const responseTimeMs = Date.now() - startTime;
 
-      // Save AI response
       const aiMessage = await this.prisma.chatMessage.create({
         data: {
           conversationId,
@@ -131,12 +119,7 @@ export class ChatService {
     }
   }
 
-  /**
-   * Stream a message response from an AI provider using Server-Sent Events (SSE).
-   * Returns an Observable that emits partial content chunks.
-   */
   async sendMessageStream(userId: string, dto: SendMessageDto): Promise<Observable<MessageEvent>> {
-    // Check usage limits
     const canProceed = await this.subscriptionsService.incrementUsage(userId);
     if (!canProceed) {
       throw new BadRequestException(
@@ -144,7 +127,6 @@ export class ChatService {
       );
     }
 
-    // Get or create conversation
     let conversationId = dto.conversationId;
     if (!conversationId) {
       const conversation = await this.prisma.chatConversation.create({
@@ -163,7 +145,6 @@ export class ChatService {
       }
     }
 
-    // Save user message
     await this.prisma.chatMessage.create({
       data: {
         conversationId,
@@ -172,7 +153,6 @@ export class ChatService {
       },
     });
 
-    // Get conversation history for context
     const history = await this.prisma.chatMessage.findMany({
       where: { conversationId },
       orderBy: { createdAt: 'asc' },
@@ -184,7 +164,6 @@ export class ChatService {
       content: msg.content,
     }));
 
-    // Get the AI provider
     const { provider, apiKey, implementation } =
       await this.aiProvidersService.getProviderForChat(dto.providerId);
 
@@ -195,7 +174,6 @@ export class ChatService {
       `Stream Chat: user=${userId} provider=${provider.name} model=${model} conversationId=${conversationId}`,
     );
 
-    // Collect streamed content to save the complete message after streaming ends
     let fullContent = '';
     const startTime = Date.now();
     const prisma = this.prisma;
@@ -204,7 +182,6 @@ export class ChatService {
 
     const sourceObservable = implementation.chatStream(apiKey, model, messages, config);
 
-    // Wrap the observable to intercept completion and save the full AI response
     return new Observable<MessageEvent>((subscriber) => {
       const sub = sourceObservable.subscribe({
         next(event: MessageEvent) {
@@ -214,7 +191,6 @@ export class ChatService {
               fullContent += parsed.content;
             }
           } catch {
-            // ignore parse errors
           }
           subscriber.next(event);
         },
@@ -222,7 +198,6 @@ export class ChatService {
           subscriber.error(err);
         },
         async complete() {
-          // Save the complete AI response to the database
           try {
             const responseTimeMs = Date.now() - startTime;
             await prisma.chatMessage.create({
@@ -250,9 +225,6 @@ export class ChatService {
     });
   }
 
-  /**
-   * Get all conversations for a user
-   */
   async getConversations(userId: string) {
     const conversations = await this.prisma.chatConversation.findMany({
       where: { userId },
@@ -271,9 +243,6 @@ export class ChatService {
     }));
   }
 
-  /**
-   * Get all messages in a conversation
-   */
   async getConversationMessages(userId: string, conversationId: string) {
     const conversation = await this.prisma.chatConversation.findFirst({
       where: { id: conversationId, userId },
@@ -310,9 +279,6 @@ export class ChatService {
     };
   }
 
-  /**
-   * Create a new empty conversation
-   */
   async createConversation(userId: string, title?: string) {
     const conversation = await this.prisma.chatConversation.create({
       data: {
@@ -331,9 +297,6 @@ export class ChatService {
     };
   }
 
-  /**
-   * Delete a conversation and all its messages
-   */
   async deleteConversation(userId: string, conversationId: string) {
     const conversation = await this.prisma.chatConversation.findFirst({
       where: { id: conversationId, userId },
@@ -350,9 +313,6 @@ export class ChatService {
     return { message: 'Conversation deleted successfully' };
   }
 
-  /**
-   * Rename a conversation
-   */
   async updateConversation(userId: string, conversationId: string, title: string) {
     const conversation = await this.prisma.chatConversation.findFirst({
       where: { id: conversationId, userId },

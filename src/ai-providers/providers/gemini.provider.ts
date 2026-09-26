@@ -16,7 +16,6 @@ export class GeminiProvider extends BaseAiProvider {
     try {
       const modelName = model || 'gemini-1.5-flash';
 
-      // Convert messages to Gemini format
       const contents = messages
         .filter((m) => m.role !== 'system')
         .map((m) => ({
@@ -66,10 +65,6 @@ export class GeminiProvider extends BaseAiProvider {
     }
   }
 
-  /**
-   * Stream chat completion from Gemini using Server-Sent Events.
-   * Uses the `streamGenerateContent` endpoint with `alt=sse`.
-   */
   chatStream(
     apiKey: string,
     model: string,
@@ -148,7 +143,6 @@ export class GeminiProvider extends BaseAiProvider {
                   } as MessageEvent);
                 }
               } catch {
-                // Skip malformed chunks
               }
             }
           }

@@ -10,20 +10,16 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const logger = new Logger('Bootstrap');
 
-  // Global prefix for all routes
   app.setGlobalPrefix('api');
 
-  // Security headers
   app.use(helmet());
 
-  // CORS - Allow Chrome Extension to connect
   app.enableCors({
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
 
-  // Global validation pipe - validates all incoming DTOs
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,        // Strip properties not in DTO
@@ -35,18 +31,15 @@ async function bootstrap() {
     }),
   );
 
-  // Global exception filter
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  // Global API logger interceptor
   app.useGlobalInterceptors(new ApiLoggerInterceptor());
 
-  // ─── Swagger/OpenAPI Documentation ───
   const config = new DocumentBuilder()
     .setTitle('EchoGPT API')
     .setDescription(
       `## EchoGPT Backend REST API
-      
+
 A production-ready backend for the EchoGPT Chrome Extension.
 Supports multiple AI providers (OpenAI, Claude, Gemini), chat management,
 web search, subscription management, and admin analytics.

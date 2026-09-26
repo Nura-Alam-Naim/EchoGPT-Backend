@@ -6,14 +6,7 @@ const SALT_LENGTH = 64;
 const TAG_LENGTH = 16;
 const KEY_LENGTH = 32;
 
-/**
- * Utility class for encrypting/decrypting sensitive data like API keys.
- * Uses AES-256-GCM for authenticated encryption.
- */
 export class EncryptionUtil {
-  /**
-   * Encrypt a plaintext string
-   */
   static encrypt(text: string, encryptionKey: string): string {
     const iv = crypto.randomBytes(IV_LENGTH);
     const salt = crypto.randomBytes(SALT_LENGTH);
@@ -28,13 +21,9 @@ export class EncryptionUtil {
 
     const tag = cipher.getAuthTag();
 
-    // Combine salt + iv + tag + encrypted data
     return Buffer.concat([salt, iv, tag, encrypted]).toString('base64');
   }
 
-  /**
-   * Decrypt an encrypted string
-   */
   static decrypt(encryptedText: string, encryptionKey: string): string {
     const buffer = Buffer.from(encryptedText, 'base64');
 

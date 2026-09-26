@@ -13,13 +13,11 @@ import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
-    // Load environment variables globally
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
     }),
 
-    // Rate limiting: 100 requests per 60 seconds per IP
     ThrottlerModule.forRoot([
       {
         ttl: parseInt(process.env.THROTTLE_TTL || '60000'),
@@ -27,10 +25,8 @@ import { AdminModule } from './admin/admin.module';
       },
     ]),
 
-    // Core modules
     PrismaModule,
 
-    // Feature modules
     AuthModule,
     UsersModule,
     SubscriptionsModule,
@@ -40,7 +36,6 @@ import { AdminModule } from './admin/admin.module';
     AdminModule,
   ],
   providers: [
-    // Apply rate limiting globally
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

@@ -4,9 +4,7 @@ import * as bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding database...');
 
-  // Create Roles
   const adminRole = await prisma.role.upsert({
     where: { name: 'ADMIN' },
     update: {},
@@ -25,9 +23,6 @@ async function main() {
     },
   });
 
-  console.log('✅ Roles created:', { adminRole: adminRole.name, userRole: userRole.name });
-
-  // Create Admin User
   const hashedPassword = await bcrypt.hash('Admin@123', 12);
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@echogpt.com' },
@@ -49,9 +44,6 @@ async function main() {
     },
   });
 
-  console.log('✅ Admin user created:', adminUser.email);
-
-  // Create Default AI Providers
   const providers = [
     {
       name: 'OpenAI',
@@ -89,14 +81,10 @@ async function main() {
       create: provider,
     });
   }
-
-  console.log('✅ AI Providers created');
-  console.log('🎉 Seeding complete!');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seeding failed:', e);
     process.exit(1);
   })
   .finally(async () => {

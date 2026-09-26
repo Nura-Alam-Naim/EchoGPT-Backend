@@ -8,10 +8,6 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
-/**
- * Global HTTP Exception Filter
- * Catches all HTTP exceptions and formats them consistently.
- */
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);

@@ -15,9 +15,6 @@ export class UsersService {
 
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Get the current user's profile
-   */
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -52,9 +49,6 @@ export class UsersService {
     };
   }
 
-  /**
-   * Update user profile
-   */
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     const user = await this.prisma.user.update({
       where: { id: userId },
@@ -81,9 +75,6 @@ export class UsersService {
     };
   }
 
-  /**
-   * Change user password
-   */
   async changePassword(userId: string, dto: ChangePasswordDto) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -93,13 +84,11 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    // Verify current password
     const isPasswordValid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
     if (!isPasswordValid) {
       throw new BadRequestException('Current password is incorrect');
     }
 
-    // Hash new password
     const newPasswordHash = await bcrypt.hash(dto.newPassword, 12);
 
     await this.prisma.user.update({
@@ -107,7 +96,6 @@ export class UsersService {
       data: { passwordHash: newPasswordHash },
     });
 
-    // Invalidate all sessions (force re-login)
     await this.prisma.session.deleteMany({
       where: { userId },
     });
@@ -117,9 +105,6 @@ export class UsersService {
     return { message: 'Password changed successfully. Please log in again.' };
   }
 
-  /**
-   * Delete user account and all associated data
-   */
   async deleteAccount(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -129,7 +114,6 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    // Cascade delete handles related records
     await this.prisma.user.delete({
       where: { id: userId },
     });
@@ -139,9 +123,6 @@ export class UsersService {
     return { message: 'Account deleted successfully' };
   }
 
-  /**
-   * Get any user by ID (Admin only)
-   */
   async getUserById(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

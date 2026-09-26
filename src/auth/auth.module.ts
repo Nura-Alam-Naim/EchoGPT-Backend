@@ -21,12 +21,10 @@ import { RolesGuard } from '../common/guards/roles.guard';
     AuthService,
     JwtStrategy,
     JwtRefreshStrategy,
-    // Apply JWT auth guard globally - all routes require auth unless marked @Public()
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
-    // Apply roles guard globally
     {
       provide: APP_GUARD,
       useClass: RolesGuard,

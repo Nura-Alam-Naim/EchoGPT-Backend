@@ -13,7 +13,6 @@ import { SearchQueryDto } from './dto/search-query.dto';
 export class WebSearchService {
   private readonly logger = new Logger(WebSearchService.name);
 
-  // Simple in-memory cache for search results (TTL: 1 hour)
   private searchCache = new Map<string, { results: any; timestamp: number }>();
   private readonly CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
@@ -23,11 +22,7 @@ export class WebSearchService {
     private subscriptionsService: SubscriptionsService,
   ) {}
 
-  /**
-   * Perform an AI-powered web search
-   */
   async search(userId: string, dto: SearchQueryDto) {
-    // Check usage limits
     const canProceed = await this.subscriptionsService.incrementUsage(userId);
     if (!canProceed) {
       throw new BadRequestException(
@@ -37,12 +32,10 @@ export class WebSearchService {
 
     const startTime = Date.now();
 
-    // Check cache first
     const cacheKey = dto.query.toLowerCase().trim();
     const cached = this.searchCache.get(cacheKey);
 
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-      // Save cached search to history
       await this.prisma.webSearch.create({
         data: {
           userId,
@@ -61,12 +54,10 @@ export class WebSearchService {
       };
     }
 
-    // Get AI provider for generating search summary
     const { provider, apiKey, implementation } =
       await this.aiProvidersService.getProviderForChat(dto.providerId);
 
     try {
-      // Use AI to generate a comprehensive search response
       const searchPrompt = [
         {
           role: 'system',
@@ -92,7 +83,6 @@ Format your response as a helpful, informative summary that answers the user's s
 
       const responseTimeMs = Date.now() - startTime;
 
-      // Create structured results
       const searchResults = {
         aiSummary: aiResult.content,
         results: [
@@ -107,13 +97,11 @@ Format your response as a helpful, informative summary that answers the user's s
         tokensUsed: aiResult.tokensUsed,
       };
 
-      // Cache the results
       this.searchCache.set(cacheKey, {
         results: searchResults,
         timestamp: Date.now(),
       });
 
-      // Save to database
       await this.prisma.webSearch.create({
         data: {
           userId,
@@ -141,9 +129,6 @@ Format your response as a helpful, informative summary that answers the user's s
     }
   }
 
-  /**
-   * Get search history for a user
-   */
   async getHistory(userId: string) {
     const searches = await this.prisma.webSearch.findMany({
       where: { userId },
@@ -164,9 +149,6 @@ Format your response as a helpful, informative summary that answers the user's s
     }));
   }
 
-  /**
-   * Get recent searches (last 10)
-   */
   async getRecent(userId: string) {
     const searches = await this.prisma.webSearch.findMany({
       where: { userId },
@@ -182,15 +164,11 @@ Format your response as a helpful, informative summary that answers the user's s
     return searches;
   }
 
-  /**
-   * Get search suggestions based on partial query
-   */
   async getSuggestions(userId: string, query: string) {
     if (!query || query.length < 2) {
       return [];
     }
 
-    // Find similar past searches
     const suggestions = await this.prisma.webSearch.findMany({
       where: {
         userId,
@@ -210,9 +188,6 @@ Format your response as a helpful, informative summary that answers the user's s
     return suggestions.map((s) => s.query);
   }
 
-  /**
-   * Delete a search from history
-   */
   async deleteSearch(userId: string, searchId: string) {
     const search = await this.prisma.webSearch.findFirst({
       where: { id: searchId, userId },

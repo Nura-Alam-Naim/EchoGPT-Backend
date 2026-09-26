@@ -46,10 +46,6 @@ export class OpenAiProvider extends BaseAiProvider {
     }
   }
 
-  /**
-   * Stream chat completion from OpenAI using Server-Sent Events.
-   * Uses the native `stream: true` option of the OpenAI API.
-   */
   chatStream(
     apiKey: string,
     model: string,
@@ -115,7 +111,6 @@ export class OpenAiProvider extends BaseAiProvider {
                   } as MessageEvent);
                 }
               } catch {
-                // Skip malformed chunks
               }
             }
           }

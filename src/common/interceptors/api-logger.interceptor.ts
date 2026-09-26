@@ -9,10 +9,6 @@ import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { PrismaService } from '../../prisma/prisma.service';
 
-/**
- * Global interceptor that logs all API requests to the database.
- * This provides the data for the Admin analytics dashboard.
- */
 @Injectable()
 export class ApiLoggerInterceptor implements NestInterceptor {
   private readonly logger = new Logger('API');

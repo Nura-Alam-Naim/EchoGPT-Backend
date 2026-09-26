@@ -14,7 +14,6 @@ export class ClaudeProvider extends BaseAiProvider {
     config?: Record<string, any>,
   ) {
     try {
-      // Separate system messages from user/assistant messages for Claude API
       const systemMessage = messages.find((m) => m.role === 'system');
       const chatMessages = messages.filter((m) => m.role !== 'system');
 
@@ -59,10 +58,6 @@ export class ClaudeProvider extends BaseAiProvider {
     }
   }
 
-  /**
-   * Stream chat completion from Claude using Server-Sent Events.
-   * Uses the native `stream: true` option of the Anthropic API.
-   */
   chatStream(
     apiKey: string,
     model: string,
@@ -141,7 +136,6 @@ export class ClaudeProvider extends BaseAiProvider {
                   return;
                 }
               } catch {
-                // Skip malformed chunks
               }
             }
           }

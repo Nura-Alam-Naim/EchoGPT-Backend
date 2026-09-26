@@ -7,9 +7,6 @@ export class AdminService {
 
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Get dashboard statistics
-   */
   async getDashboardStats() {
     const [
       totalUsers,
@@ -49,9 +46,6 @@ export class AdminService {
     };
   }
 
-  /**
-   * List all users with pagination
-   */
   async getUsers(page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
 
@@ -98,9 +92,6 @@ export class AdminService {
     };
   }
 
-  /**
-   * Change a user's role
-   */
   async changeUserRole(userId: string, roleName: string) {
     const role = await this.prisma.role.findUnique({
       where: { name: roleName },
@@ -128,9 +119,6 @@ export class AdminService {
     };
   }
 
-  /**
-   * Delete a user (admin)
-   */
   async deleteUser(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -147,9 +135,6 @@ export class AdminService {
     return { message: 'User deleted successfully' };
   }
 
-  /**
-   * Get all subscriptions
-   */
   async getSubscriptions(page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
 
@@ -186,22 +171,17 @@ export class AdminService {
     };
   }
 
-  /**
-   * API usage analytics
-   */
   async getUsageAnalytics() {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    // Messages per day for the last 7 days
     const dailyMessages = await this.prisma.chatMessage.groupBy({
       by: ['createdAt'],
       where: { createdAt: { gte: weekAgo } },
       _count: true,
     });
 
-    // Top models used
     const topModels = await this.prisma.chatMessage.groupBy({
       by: ['modelUsed'],
       where: { modelUsed: { not: null } },
@@ -210,7 +190,6 @@ export class AdminService {
       take: 5,
     });
 
-    // Average response time
     const avgResponseTime = await this.prisma.chatMessage.aggregate({
       where: { responseTimeMs: { not: null } },
       _avg: { responseTimeMs: true, tokensUsed: true },
@@ -232,9 +211,6 @@ export class AdminService {
     };
   }
 
-  /**
-   * Get request logs (paginated)
-   */
   async getRequestLogs(page: number = 1, limit: number = 50) {
     const skip = (page - 1) * limit;
 
@@ -270,13 +246,9 @@ export class AdminService {
     };
   }
 
-  /**
-   * System health check
-   */
   async getSystemHealth() {
     const startTime = Date.now();
 
-    // Check database connectivity
     let dbStatus = 'HEALTHY';
     let dbResponseMs = 0;
     try {
@@ -287,7 +259,6 @@ export class AdminService {
       dbStatus = 'UNHEALTHY';
     }
 
-    // Check AI provider statuses
     const providers = await this.prisma.aiProvider.findMany({
       where: { isEnabled: true },
       select: {
@@ -320,8 +291,6 @@ export class AdminService {
       responseTimeMs: Date.now() - startTime,
     };
   }
-
-  // ─── Private Helpers ───
 
   private async getUsageCount(period: 'today' | 'week' | 'month') {
     const now = new Date();

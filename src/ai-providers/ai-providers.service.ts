@@ -29,7 +29,6 @@ export class AiProvidersService {
   ) {
     this.encryptionKey = this.configService.get<string>('ENCRYPTION_KEY') || 'default-key-change-in-production!!';
 
-    // Map provider types to their implementations
     this.providers = new Map<string, BaseAiProvider>([
       ['OPENAI', this.openAiProvider],
       ['CLAUDE', this.claudeProvider],
@@ -37,9 +36,6 @@ export class AiProvidersService {
     ]);
   }
 
-  /**
-   * List all AI providers (hides API keys)
-   */
   async findAll() {
     const providers = await this.prisma.aiProvider.findMany({
       orderBy: { createdAt: 'asc' },
@@ -61,9 +57,6 @@ export class AiProvidersService {
     }));
   }
 
-  /**
-   * Get a single provider by ID
-   */
   async findOne(id: string) {
     const provider = await this.prisma.aiProvider.findUnique({
       where: { id },
@@ -80,17 +73,12 @@ export class AiProvidersService {
     };
   }
 
-  /**
-   * Create a new AI provider
-   */
   async create(dto: CreateProviderDto) {
-    // Encrypt API key if provided
     let apiKeyEncrypted: string | null = null;
     if (dto.apiKey) {
       apiKeyEncrypted = EncryptionUtil.encrypt(dto.apiKey, this.encryptionKey);
     }
 
-    // If this provider is set as default, unset other defaults
     if (dto.isDefault) {
       await this.prisma.aiProvider.updateMany({
         data: { isDefault: false },
@@ -125,9 +113,6 @@ export class AiProvidersService {
     };
   }
 
-  /**
-   * Update an AI provider
-   */
   async update(id: string, dto: UpdateProviderDto) {
     const existing = await this.prisma.aiProvider.findUnique({ where: { id } });
     if (!existing) {
@@ -169,9 +154,6 @@ export class AiProvidersService {
     };
   }
 
-  /**
-   * Delete an AI provider
-   */
   async remove(id: string) {
     const existing = await this.prisma.aiProvider.findUnique({ where: { id } });
     if (!existing) {
@@ -185,9 +167,6 @@ export class AiProvidersService {
     return { message: 'AI Provider deleted successfully' };
   }
 
-  /**
-   * Enable or disable a provider
-   */
   async toggle(id: string) {
     const existing = await this.prisma.aiProvider.findUnique({ where: { id } });
     if (!existing) {
@@ -205,9 +184,6 @@ export class AiProvidersService {
     };
   }
 
-  /**
-   * Run health check on a provider
-   */
   async healthCheck(id: string) {
     const dbProvider = await this.prisma.aiProvider.findUnique({ where: { id } });
     if (!dbProvider) {
@@ -218,19 +194,15 @@ export class AiProvidersService {
       throw new BadRequestException('No API key configured for this provider');
     }
 
-    // Decrypt API key
     const apiKey = EncryptionUtil.decrypt(dbProvider.apiKeyEncrypted, this.encryptionKey);
 
-    // Get the provider implementation
     const providerImpl = this.providers.get(dbProvider.type);
     if (!providerImpl) {
       throw new BadRequestException(`Unknown provider type: ${dbProvider.type}`);
     }
 
-    // Run health check
     const result = await providerImpl.healthCheck(apiKey);
 
-    // Update health status in DB
     await this.prisma.aiProvider.update({
       where: { id },
       data: {
@@ -245,9 +217,6 @@ export class AiProvidersService {
     };
   }
 
-  /**
-   * Get provider implementation and API key for chat (used internally by ChatService)
-   */
   async getProviderForChat(providerId?: string) {
     let dbProvider;
 
@@ -256,12 +225,10 @@ export class AiProvidersService {
         where: { id: providerId },
       });
     } else {
-      // Use default provider
       dbProvider = await this.prisma.aiProvider.findFirst({
         where: { isDefault: true, isEnabled: true },
       });
 
-      // Fallback to any enabled provider
       if (!dbProvider) {
         dbProvider = await this.prisma.aiProvider.findFirst({
           where: { isEnabled: true },

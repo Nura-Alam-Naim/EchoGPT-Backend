@@ -23,11 +23,7 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
-  /**
-   * Register a new user account
-   */
   async register(dto: RegisterDto) {
-    // Check if email already exists
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
     });
@@ -36,7 +32,6 @@ export class AuthService {
       throw new ConflictException('An account with this email already exists');
     }
 
-    // Get default USER role
     const userRole = await this.prisma.role.findUnique({
       where: { name: 'USER' },
     });
@@ -45,13 +40,10 @@ export class AuthService {
       throw new BadRequestException('System error: Default role not found. Please run database seed.');
     }
 
-    // Hash password with bcrypt (12 rounds)
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
-    // Generate email verification token
     const emailVerificationToken = crypto.randomBytes(32).toString('hex');
 
-    // Create user with a FREE subscription
     const user = await this.prisma.user.create({
       data: {
         email: dto.email.toLowerCase(),
@@ -71,10 +63,8 @@ export class AuthService {
       include: { role: true },
     });
 
-    // Generate tokens
     const tokens = await this.generateTokens(user.id, user.email, user.role.name);
 
-    // Create session
     await this.createSession(user.id, tokens.refreshToken);
 
     this.logger.log(`New user registered: ${user.email}`);
@@ -86,11 +76,7 @@ export class AuthService {
     };
   }
 
-  /**
-   * Log in with email and password
-   */
   async login(dto: LoginDto) {
-    // Find user by email
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
       include: { role: true },
@@ -100,17 +86,14 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    // Verify password
     const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    // Generate tokens
     const tokens = await this.generateTokens(user.id, user.email, user.role.name);
 
-    // Create session
     await this.createSession(user.id, tokens.refreshToken);
 
     this.logger.log(`User logged in: ${user.email}`);
@@ -122,11 +105,7 @@ export class AuthService {
     };
   }
 
-  /**
-   * Log out - invalidate the refresh token
-   */
   async logout(userId: string) {
-    // Delete all sessions for this user
     await this.prisma.session.deleteMany({
       where: { userId },
     });
@@ -134,17 +113,12 @@ export class AuthService {
     return { message: 'Logged out successfully' };
   }
 
-  /**
-   * Refresh access token using a valid refresh token
-   */
   async refreshTokens(userId: string, refreshToken: string) {
-    // Hash the incoming refresh token to compare with stored hash
     const refreshTokenHash = crypto
       .createHash('sha256')
       .update(refreshToken)
       .digest('hex');
 
-    // Find the session with this refresh token
     const session = await this.prisma.session.findFirst({
       where: {
         userId,
@@ -157,7 +131,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    // Get user data
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { role: true },
@@ -167,10 +140,8 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    // Generate new tokens
     const tokens = await this.generateTokens(user.id, user.email, user.role.name);
 
-    // Update session with new refresh token
     const newRefreshTokenHash = crypto
       .createHash('sha256')
       .update(tokens.refreshToken)
@@ -190,9 +161,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Verify email with token
-   */
   async verifyEmail(token: string) {
     const user = await this.prisma.user.findFirst({
       where: { emailVerificationToken: token },
@@ -213,11 +181,6 @@ export class AuthService {
     return { message: 'Email verified successfully' };
   }
 
-  // ─── Private Helper Methods ───
-
-  /**
-   * Generate JWT access and refresh tokens
-   */
   private async generateTokens(userId: string, email: string, role: string) {
     const payload = { sub: userId, email, role };
 
@@ -232,16 +195,12 @@ export class AuthService {
       }),
     ]);
 
-    // Calculate expiration time for the access token
     const decoded = this.jwtService.decode(accessToken) as any;
     const expiresAt = new Date(decoded.exp * 1000).toISOString();
 
     return { accessToken, refreshToken, expiresAt };
   }
 
-  /**
-   * Create a new session (stores hashed refresh token)
-   */
   private async createSession(userId: string, refreshToken: string) {
     const refreshTokenHash = crypto
       .createHash('sha256')
@@ -257,9 +216,6 @@ export class AuthService {
     });
   }
 
-  /**
-   * Remove sensitive fields from user object before returning
-   */
   private sanitizeUser(user: any) {
     return {
       id: user.id,
