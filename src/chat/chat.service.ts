@@ -5,6 +5,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiProvidersService } from '../ai-providers/ai-providers.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
@@ -129,6 +130,125 @@ export class ChatService {
       this.logger.error(`Chat error: ${error.message}`);
       throw new BadRequestException(`AI Provider error: ${error.message}`);
     }
+  }
+
+  /**
+   * Stream a message response from an AI provider using Server-Sent Events (SSE).
+   * Returns an Observable that emits partial content chunks.
+   */
+  async sendMessageStream(userId: string, dto: SendMessageDto): Promise<Observable<MessageEvent>> {
+    // Check usage limits
+    const canProceed = await this.subscriptionsService.incrementUsage(userId);
+    if (!canProceed) {
+      throw new BadRequestException(
+        'Daily request limit reached. Upgrade to Premium for more requests.',
+      );
+    }
+
+    // Get or create conversation
+    let conversationId = dto.conversationId;
+    if (!conversationId) {
+      const conversation = await this.prisma.chatConversation.create({
+        data: {
+          userId,
+          title: dto.message.substring(0, 50) + (dto.message.length > 50 ? '...' : ''),
+        },
+      });
+      conversationId = conversation.id;
+    } else {
+      const conversation = await this.prisma.chatConversation.findFirst({
+        where: { id: conversationId, userId },
+      });
+      if (!conversation) {
+        throw new NotFoundException('Conversation not found');
+      }
+    }
+
+    // Save user message
+    await this.prisma.chatMessage.create({
+      data: {
+        conversationId,
+        role: 'USER',
+        content: dto.message,
+      },
+    });
+
+    // Get conversation history for context
+    const history = await this.prisma.chatMessage.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: 'asc' },
+      take: 20,
+    });
+
+    const messages = history.map((msg) => ({
+      role: msg.role.toLowerCase(),
+      content: msg.content,
+    }));
+
+    // Get the AI provider
+    const { provider, apiKey, implementation } =
+      await this.aiProvidersService.getProviderForChat(dto.providerId);
+
+    const model = dto.model || provider.defaultModel || 'gpt-4o-mini';
+    const config = (provider.config as Record<string, any>) || {};
+
+    this.logger.log(
+      `Stream Chat: user=${userId} provider=${provider.name} model=${model} conversationId=${conversationId}`,
+    );
+
+    // Collect streamed content to save the complete message after streaming ends
+    let fullContent = '';
+    const startTime = Date.now();
+    const prisma = this.prisma;
+    const logger = this.logger;
+    const providerRecord = provider;
+
+    const sourceObservable = implementation.chatStream(apiKey, model, messages, config);
+
+    // Wrap the observable to intercept completion and save the full AI response
+    return new Observable<MessageEvent>((subscriber) => {
+      const sub = sourceObservable.subscribe({
+        next(event: MessageEvent) {
+          try {
+            const parsed = JSON.parse(event.data);
+            if (parsed.content) {
+              fullContent += parsed.content;
+            }
+          } catch {
+            // ignore parse errors
+          }
+          subscriber.next(event);
+        },
+        error(err) {
+          subscriber.error(err);
+        },
+        async complete() {
+          // Save the complete AI response to the database
+          try {
+            const responseTimeMs = Date.now() - startTime;
+            await prisma.chatMessage.create({
+              data: {
+                conversationId: conversationId!,
+                providerId: providerRecord.id,
+                role: 'ASSISTANT',
+                content: fullContent,
+                modelUsed: model,
+                tokensUsed: null,
+                responseTimeMs,
+              },
+            });
+            logger.log(
+              `Stream complete: provider=${providerRecord.name} model=${model} time=${responseTimeMs}ms chars=${fullContent.length}`,
+            );
+          } catch (e: any) {
+            logger.error(`Failed to save streamed message: ${e.message}`);
+          }
+          subscriber.complete();
+        },
+      });
+
+      return () => sub.unsubscribe();
+    });
   }
 
   /**

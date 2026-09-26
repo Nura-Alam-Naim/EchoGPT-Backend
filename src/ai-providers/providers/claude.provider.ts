@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import { BaseAiProvider } from './base-ai.provider';
 
 @Injectable()
@@ -58,11 +59,113 @@ export class ClaudeProvider extends BaseAiProvider {
     }
   }
 
+  /**
+   * Stream chat completion from Claude using Server-Sent Events.
+   * Uses the native `stream: true` option of the Anthropic API.
+   */
+  chatStream(
+    apiKey: string,
+    model: string,
+    messages: Array<{ role: string; content: string }>,
+    config?: Record<string, any>,
+  ): Observable<MessageEvent> {
+    return new Observable<MessageEvent>((subscriber) => {
+      const abortController = new AbortController();
+
+      (async () => {
+        try {
+          const systemMessage = messages.find((m) => m.role === 'system');
+          const chatMessages = messages.filter((m) => m.role !== 'system');
+
+          const body: any = {
+            model: model || 'claude-3-5-sonnet-20241022',
+            max_tokens: config?.maxTokens || 4096,
+            stream: true,
+            messages: chatMessages.map((m) => ({
+              role: m.role === 'USER' ? 'user' : m.role === 'ASSISTANT' ? 'assistant' : m.role.toLowerCase(),
+              content: m.content,
+            })),
+          };
+
+          if (systemMessage) {
+            body.system = systemMessage.content;
+          }
+
+          const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'x-api-key': apiKey,
+              'Content-Type': 'application/json',
+              'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify(body),
+            signal: abortController.signal,
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error?.message || `Claude API error: ${response.status}`);
+          }
+
+          const reader = response.body?.getReader();
+          if (!reader) throw new Error('No response body');
+
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || !trimmed.startsWith('data: ')) continue;
+              const data = trimmed.slice(6);
+
+              try {
+                const parsed = JSON.parse(data);
+
+                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                  subscriber.next({
+                    data: JSON.stringify({ content: parsed.delta.text, model: model }),
+                  } as MessageEvent);
+                }
+
+                if (parsed.type === 'message_stop') {
+                  subscriber.next({ data: JSON.stringify({ done: true }) } as MessageEvent);
+                  subscriber.complete();
+                  return;
+                }
+              } catch {
+                // Skip malformed chunks
+              }
+            }
+          }
+
+          subscriber.next({ data: JSON.stringify({ done: true }) } as MessageEvent);
+          subscriber.complete();
+        } catch (error: any) {
+          if (error.name !== 'AbortError') {
+            subscriber.next({
+              data: JSON.stringify({ error: error.message }),
+            } as MessageEvent);
+            subscriber.complete();
+          }
+        }
+      })();
+
+      return () => abortController.abort();
+    });
+  }
+
   async healthCheck(apiKey: string) {
     const startTime = Date.now();
 
     try {
-      // Claude doesn't have a simple health endpoint, so we send a minimal request
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {

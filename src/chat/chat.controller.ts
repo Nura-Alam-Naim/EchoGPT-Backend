@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Sse,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,6 +15,7 @@ import {
   ApiBearerAuth,
   ApiParam,
 } from '@nestjs/swagger';
+import { Observable } from 'rxjs';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { SendMessageResponseDto } from './dto/chat-response.dto';
@@ -42,6 +44,22 @@ export class ChatController {
     @Body() dto: SendMessageDto,
   ) {
     return this.chatService.sendMessage(userId, dto);
+  }
+
+  @Post('send/stream')
+  @Sse()
+  @ApiOperation({
+    summary: 'Send a message to AI (Streaming)',
+    description:
+      'Send a prompt and receive the AI response as a real-time Server-Sent Events (SSE) stream. Each event contains a partial content chunk. The final event has `{ "done": true }`. This is ideal for displaying the response as it is being generated.',
+  })
+  @ApiResponse({ status: 200, description: 'SSE stream of AI response chunks' })
+  @ApiResponse({ status: 400, description: 'Usage limit reached or provider error' })
+  async sendMessageStream(
+    @CurrentUser('id') userId: string,
+    @Body() dto: SendMessageDto,
+  ): Promise<Observable<MessageEvent>> {
+    return this.chatService.sendMessageStream(userId, dto);
   }
 
   @Get('conversations')
